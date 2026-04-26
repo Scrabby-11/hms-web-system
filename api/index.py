@@ -38,39 +38,106 @@ def get_stats():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/doctors')
-def get_doctors():
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT d.doctor_id, d.name as doctor_name, d.specialization, dept.name as department_name, d.phone_no, d.email
-                FROM Doctor d
-                LEFT JOIN Department dept ON d.department_id = dept.department_id
-            """)
-            doctors = cursor.fetchall()
-        conn.close()
-        return jsonify({"doctors": doctors})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+@app.route('/api/doctors', methods=['GET', 'POST'])
+def manage_doctors():
+    if request.method == 'GET':
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT d.doctor_id, d.name as doctor_name, d.specialization, dept.name as department_name, d.phone_no, d.email
+                    FROM Doctor d
+                    LEFT JOIN Department dept ON d.department_id = dept.department_id
+                    ORDER BY d.doctor_id DESC
+                """)
+                doctors = cursor.fetchall()
+            conn.close()
+            return jsonify({"doctors": doctors})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    if request.method == 'POST':
+        data = request.json
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT MAX(doctor_id) as max_id FROM Doctor")
+                row = cursor.fetchone()
+                next_id = (row['max_id'] or 0) + 1
+                
+                cursor.execute("""
+                    INSERT INTO Doctor (doctor_id, department_id, name, specialization, phone_no, email)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (next_id, 1, data['name'], data.get('specialization', 'General'), data.get('phone_no', ''), data.get('email', '')))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "message": "Doctor added successfully!"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-@app.route('/api/patients')
-def get_patients():
+@app.route('/api/doctors/<int:doctor_id>', methods=['DELETE'])
+def delete_doctor(doctor_id):
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT patient_id, name, gender, dob, phone_no, address
-                FROM Patient
-                ORDER BY patient_id DESC
-            """)
-            patients = cursor.fetchall()
-            for p in patients:
-                if p.get('dob'): p['dob'] = str(p['dob'])
+            cursor.execute("DELETE FROM Appointment WHERE doctor_id = %s", (doctor_id,))
+            cursor.execute("DELETE FROM Doctor WHERE doctor_id = %s", (doctor_id,))
+        conn.commit()
         conn.close()
-        return jsonify({"patients": patients})
+        return jsonify({"success": True, "message": "Doctor deleted successfully!"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Cannot delete doctor: " + str(e)}), 500
+
+@app.route('/api/patients', methods=['GET', 'POST'])
+def manage_patients():
+    if request.method == 'GET':
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT patient_id, name, gender, dob, phone_no, address
+                    FROM Patient
+                    ORDER BY patient_id DESC
+                """)
+                patients = cursor.fetchall()
+                for p in patients:
+                    if p.get('dob'): p['dob'] = str(p['dob'])
+            conn.close()
+            return jsonify({"patients": patients})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+    if request.method == 'POST':
+        data = request.json
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT MAX(patient_id) as max_id FROM Patient")
+                row = cursor.fetchone()
+                next_id = (row['max_id'] or 0) + 1
+                
+                cursor.execute("""
+                    INSERT INTO Patient (patient_id, name, gender, dob, phone_no, address)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (next_id, data['name'], data.get('gender', 'Male'), data.get('dob') or None, data.get('phone_no', ''), data.get('address', '')))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "message": "Patient added successfully!"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/api/patients/<int:patient_id>', methods=['DELETE'])
+def delete_patient(patient_id):
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM Appointment WHERE patient_id = %s", (patient_id,))
+            cursor.execute("DELETE FROM Patient WHERE patient_id = %s", (patient_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": "Patient deleted successfully!"})
+    except Exception as e:
+        return jsonify({"error": "Cannot delete patient: " + str(e)}), 500
 
 @app.route('/api/appointments', methods=['GET', 'POST'])
 def manage_appointments():
@@ -116,6 +183,18 @@ def manage_appointments():
             return jsonify({"success": True, "message": "Appointment created successfully!"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+@app.route('/api/appointments/<int:appointment_id>', methods=['DELETE'])
+def delete_appointment(appointment_id):
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM Appointment WHERE appointment_id = %s", (appointment_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": "Appointment deleted successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api')
 def api_root():

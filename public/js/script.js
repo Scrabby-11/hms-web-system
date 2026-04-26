@@ -12,17 +12,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('.view-section');
     const pageTitle = document.getElementById('pageTitle');
     
-    const modal = document.getElementById('appointmentModal');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
+    // Modals
+    const appointmentModal = document.getElementById('appointmentModal');
+    const doctorModal = document.getElementById('doctorModal');
+    const patientModal = document.getElementById('patientModal');
+
+    // Forms
     const appointmentForm = document.getElementById('appointmentForm');
+    const doctorForm = document.getElementById('doctorForm');
+    const patientForm = document.getElementById('patientForm');
 
     // Initialize
     init();
 
     function init() {
         setupNavigation();
-        setupModal();
+        setupModals();
         fetchAllData();
     }
 
@@ -31,96 +36,129 @@ document.addEventListener('DOMContentLoaded', () => {
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Update active state on nav
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
 
-                // Switch section
                 const targetId = item.getAttribute('data-target');
                 sections.forEach(sec => sec.style.display = 'none');
                 document.getElementById(targetId).style.display = 'block';
-
-                // Update Title
                 pageTitle.textContent = item.textContent.trim();
             });
         });
     }
 
     // --- Modal Logic ---
-    function setupModal() {
-        openModalBtn.onclick = () => {
-            modal.style.display = "block";
-            populateSelects();
-        };
+    function setupModals() {
+        // Open Modal Buttons
+        document.getElementById('openModalBtn').onclick = () => { appointmentModal.style.display = "block"; populateSelects(); };
+        document.getElementById('openDoctorModalBtn').onclick = () => { doctorModal.style.display = "block"; };
+        document.getElementById('openPatientModalBtn').onclick = () => { patientModal.style.display = "block"; };
 
-        closeModalBtn.onclick = () => {
-            modal.style.display = "none";
-            document.getElementById('formMsg').textContent = '';
-            appointmentForm.reset();
-        };
-
-        window.onclick = (event) => {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        };
-
-        appointmentForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitAppointmentBtn');
-            const msg = document.getElementById('formMsg');
-            btn.disabled = true;
-            btn.textContent = 'Booking...';
-
-            const payload = {
-                patient_id: document.getElementById('patientSelect').value,
-                doctor_id: document.getElementById('doctorSelect').value,
-                date: document.getElementById('appointmentDate').value,
-                time: document.getElementById('appointmentTime').value
+        // Close Modal Buttons
+        document.querySelectorAll('.closeModalBtn').forEach(btn => {
+            btn.onclick = function() {
+                this.parentElement.parentElement.style.display = "none";
+                appointmentForm.reset(); doctorForm.reset(); patientForm.reset();
+                document.getElementById('formMsg').textContent = '';
+                document.getElementById('docFormMsg').textContent = '';
+                document.getElementById('patFormMsg').textContent = '';
             };
+        });
 
-            try {
-                const res = await fetch(`${API_BASE}/appointments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    msg.style.color = '#34D399';
-                    msg.textContent = 'Appointment booked successfully!';
-                    setTimeout(() => {
-                        modal.style.display = "none";
-                        appointmentForm.reset();
-                        msg.textContent = '';
-                        // Refresh data
-                        fetchDashboardData();
-                        fetchAppointments();
-                    }, 1500);
-                } else {
-                    msg.style.color = '#F87171';
-                    msg.textContent = data.error || 'Failed to book appointment.';
-                }
-            } catch (err) {
-                msg.style.color = '#F87171';
-                msg.textContent = 'Network error occurred.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Book Appointment';
-            }
+        // Window Click to close
+        window.onclick = (event) => {
+            if (event.target == appointmentModal) appointmentModal.style.display = "none";
+            if (event.target == doctorModal) doctorModal.style.display = "none";
+            if (event.target == patientModal) patientModal.style.display = "none";
         };
+
+        // Form Submits
+        appointmentForm.onsubmit = (e) => handleFormSubmit(e, 'appointmentForm', `${API_BASE}/appointments`, {
+            patient_id: document.getElementById('patientSelect').value,
+            doctor_id: document.getElementById('doctorSelect').value,
+            date: document.getElementById('appointmentDate').value,
+            time: document.getElementById('appointmentTime').value
+        }, 'formMsg', 'submitAppointmentBtn', appointmentModal);
+
+        doctorForm.onsubmit = (e) => handleFormSubmit(e, 'doctorForm', `${API_BASE}/doctors`, {
+            name: document.getElementById('docName').value,
+            specialization: document.getElementById('docSpec').value,
+            phone_no: document.getElementById('docPhone').value,
+            email: document.getElementById('docEmail').value
+        }, 'docFormMsg', 'submitDoctorBtn', doctorModal);
+
+        patientForm.onsubmit = (e) => handleFormSubmit(e, 'patientForm', `${API_BASE}/patients`, {
+            name: document.getElementById('patName').value,
+            gender: document.getElementById('patGender').value,
+            dob: document.getElementById('patDob').value,
+            phone_no: document.getElementById('patPhone').value,
+            address: document.getElementById('patAddress').value
+        }, 'patFormMsg', 'submitPatientBtn', patientModal);
+    }
+
+    async function handleFormSubmit(e, formId, url, payload, msgId, btnId, modalElem) {
+        e.preventDefault();
+        const btn = document.getElementById(btnId);
+        const msg = document.getElementById(msgId);
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                msg.style.color = '#34D399';
+                msg.textContent = data.message;
+                setTimeout(() => {
+                    modalElem.style.display = "none";
+                    document.getElementById(formId).reset();
+                    msg.textContent = '';
+                    fetchAllData();
+                }, 1000);
+            } else {
+                msg.style.color = '#F87171';
+                msg.textContent = data.error || 'Operation failed.';
+            }
+        } catch (err) {
+            msg.style.color = '#F87171';
+            msg.textContent = 'Network error occurred.';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    // --- Delete Action ---
+    window.deleteRecord = async function(type, id) {
+        if(!confirm(`Are you sure you want to delete this ${type}?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/${type}s/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if(data.success) {
+                alert(`${type} deleted successfully!`);
+                fetchAllData();
+            } else {
+                alert(data.error || 'Failed to delete');
+            }
+        } catch(e) {
+            alert('Network error');
+        }
     }
 
     function populateSelects() {
         const pSelect = document.getElementById('patientSelect');
         const dSelect = document.getElementById('doctorSelect');
-        
         pSelect.innerHTML = '<option value="">Select a patient...</option>' + 
-            patientsData.map(p => `<option value="${p.patient_id}">${p.name} (ID: ${p.patient_id})</option>`).join('');
-            
+            patientsData.map(p => `<option value="${p.patient_id}">${p.name}</option>`).join('');
         dSelect.innerHTML = '<option value="">Select a doctor...</option>' + 
-            doctorsData.map(d => `<option value="${d.doctor_id}">Dr. ${d.doctor_name} (${d.specialization})</option>`).join('');
+            doctorsData.map(d => `<option value="${d.doctor_id}">Dr. ${d.doctor_name}</option>`).join('');
     }
 
     // --- Data Fetching ---
@@ -139,9 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
             renderStats(statsRes);
             renderDashboardAppointments(apptRes);
-        } catch (error) {
-            console.error("Dashboard error:", error);
-        }
+        } catch (error) {}
     }
 
     async function fetchDoctors() {
@@ -152,9 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDoctorsTable(res.doctors);
                 renderDashboardDoctors(res.doctors.slice(0, 5));
             }
-        } catch (err) {
-            console.error("Doctors error:", err);
-        }
+        } catch (err) {}
     }
 
     async function fetchPatients() {
@@ -164,9 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 patientsData = res.patients;
                 renderPatientsTable(res.patients);
             }
-        } catch (err) {
-            console.error("Patients error:", err);
-        }
+        } catch (err) {}
     }
 
     async function fetchAppointments() {
@@ -175,21 +207,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.appointments) {
                 renderAppointmentsTable(res.appointments);
             }
-        } catch (err) {
-            console.error("Appointments error:", err);
-        }
+        } catch (err) {}
     }
 
     // --- Rendering Logic ---
     function renderStats(data) {
         const grid = document.getElementById('statsGrid');
         if (data.error || typeof data.error === 'string') {
-            grid.innerHTML = `<div class="stat-card" style="grid-column: 1/-1; text-align: center; color: #F87171;">
-                Failed to connect to Database. Please ensure backend is running.
-            </div>`;
+            grid.innerHTML = `<div class="stat-card" style="grid-column: 1/-1; text-align: center; color: #F87171;">Failed to connect to Database.</div>`;
             return;
         }
-
         grid.innerHTML = `
             <div class="stat-card">
                 <div class="stat-icon">🤒</div>
@@ -219,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="list-item">
                 <div>
                     <div class="item-main">Dr. ${doc.doctor_name}</div>
-                    <div class="item-sub">${doc.specialization || doc.department_name || 'General'}</div>
+                    <div class="item-sub">${doc.specialization || 'General'}</div>
                 </div>
                 <div class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #A78BFA;">ID: ${doc.doctor_id}</div>
             </div>
@@ -263,8 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>#${d.doctor_id}</td>
                 <td><strong>Dr. ${d.doctor_name}</strong></td>
                 <td>${d.specialization || '-'}</td>
-                <td>${d.department_name || '-'}</td>
                 <td>${d.phone_no || '-'}</td>
+                <td><button class="btn" style="background:rgba(239,68,68,0.2);color:#F87171;padding:0.3rem 0.6rem;font-size:0.8rem;" onclick="deleteRecord('doctor', ${d.doctor_id})">Delete</button></td>
             </tr>
         `).join('');
     }
@@ -280,9 +307,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>#${p.patient_id}</td>
                 <td><strong>${p.name}</strong></td>
                 <td>${p.gender || '-'}</td>
-                <td>${p.dob || '-'}</td>
                 <td>${p.phone_no || '-'}</td>
                 <td>${p.address || '-'}</td>
+                <td><button class="btn" style="background:rgba(239,68,68,0.2);color:#F87171;padding:0.3rem 0.6rem;font-size:0.8rem;" onclick="deleteRecord('patient', ${p.patient_id})">Delete</button></td>
             </tr>
         `).join('');
     }
@@ -306,9 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>#${a.appointment_id}</td>
                 <td>${a.patient_name}</td>
                 <td>Dr. ${a.doctor_name}</td>
-                <td>${a.date || '-'}</td>
-                <td>${a.time || '-'}</td>
+                <td>${a.date || '-'} ${a.time || ''}</td>
                 <td><span class="status-badge ${statusClass}">${a.status || 'Scheduled'}</span></td>
+                <td><button class="btn" style="background:rgba(239,68,68,0.2);color:#F87171;padding:0.3rem 0.6rem;font-size:0.8rem;" onclick="deleteRecord('appointment', ${a.appointment_id})">Delete</button></td>
             </tr>
             `;
         }).join('');
