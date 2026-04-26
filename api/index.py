@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pymysql
 import os
@@ -44,10 +44,9 @@ def get_doctors():
         conn = get_db_connection()
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT d.doctor_id, d.name as doctor_name, d.specialization, dept.name as department_name
+                SELECT d.doctor_id, d.name as doctor_name, d.specialization, dept.name as department_name, d.phone_no, d.email
                 FROM Doctor d
                 LEFT JOIN Department dept ON d.department_id = dept.department_id
-                LIMIT 10
             """)
             doctors = cursor.fetchall()
         conn.close()
@@ -55,29 +54,69 @@ def get_doctors():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/appointments')
-def get_recent_appointments():
+@app.route('/api/patients')
+def get_patients():
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT a.appointment_id, p.name as patient_name, d.name as doctor_name, a.date, a.status
-                FROM Appointment a
-                JOIN Patient p ON a.patient_id = p.patient_id
-                JOIN Doctor d ON a.doctor_id = d.doctor_id
-                ORDER BY a.date DESC
-                LIMIT 5
+                SELECT patient_id, name, gender, dob, phone_no, address
+                FROM Patient
+                ORDER BY patient_id DESC
             """)
-            appointments = cursor.fetchall()
-            for appt in appointments:
-                if appt.get('date'):
-                    appt['date'] = str(appt['date'])
+            patients = cursor.fetchall()
+            for p in patients:
+                if p.get('dob'): p['dob'] = str(p['dob'])
         conn.close()
-        return jsonify({"appointments": appointments})
+        return jsonify({"patients": patients})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Add a default fallback route for testing
+@app.route('/api/appointments', methods=['GET', 'POST'])
+def manage_appointments():
+    if request.method == 'GET':
+        limit = request.args.get('limit')
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT a.appointment_id, p.name as patient_name, d.name as doctor_name, a.date, a.time, a.status
+                    FROM Appointment a
+                    JOIN Patient p ON a.patient_id = p.patient_id
+                    JOIN Doctor d ON a.doctor_id = d.doctor_id
+                    ORDER BY a.appointment_id DESC
+                """
+                if limit:
+                    query += f" LIMIT {int(limit)}"
+                cursor.execute(query)
+                appointments = cursor.fetchall()
+                for appt in appointments:
+                    if appt.get('date'): appt['date'] = str(appt['date'])
+                    if appt.get('time'): appt['time'] = str(appt['time'])
+            conn.close()
+            return jsonify({"appointments": appointments})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    if request.method == 'POST':
+        data = request.json
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT MAX(appointment_id) as max_id FROM Appointment")
+                row = cursor.fetchone()
+                next_id = (row['max_id'] or 0) + 1
+                
+                cursor.execute("""
+                    INSERT INTO Appointment (appointment_id, patient_id, doctor_id, date, time, status)
+                    VALUES (%s, %s, %s, %s, %s, 'Pending')
+                """, (next_id, data['patient_id'], data['doctor_id'], data['date'], data['time']))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "message": "Appointment created successfully!"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
 @app.route('/api')
 def api_root():
     return jsonify({"message": "Hospital HMS API is running!"})

@@ -15,17 +15,17 @@
                 <h2>HMS<span class="highlight">.</span></h2>
             </div>
             <nav class="nav-menu">
-                <a href="#" class="nav-item active">
+                <a href="#" class="nav-item active" data-target="dashboardSection">
                     <span class="icon">📊</span> Dashboard
                 </a>
-                <a href="#" class="nav-item">
+                <a href="#" class="nav-item" data-target="doctorsSection">
                     <span class="icon">👨‍⚕️</span> Doctors
                 </a>
-                <a href="#" class="nav-item">
-                    <span class="icon">📅</span> Appointments
-                </a>
-                <a href="#" class="nav-item">
+                <a href="#" class="nav-item" data-target="patientsSection">
                     <span class="icon">🤒</span> Patients
+                </a>
+                <a href="#" class="nav-item" data-target="appointmentsSection">
+                    <span class="icon">📅</span> Appointments
                 </a>
             </nav>
             <div class="user-profile">
@@ -40,46 +40,141 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
-                <h1>Dashboard Overview</h1>
+                <h1 id="pageTitle">Dashboard Overview</h1>
                 <div class="header-actions">
-                    <button class="btn btn-primary">+ New Appointment</button>
+                    <button class="btn btn-primary" id="openModalBtn">+ New Appointment</button>
                 </div>
             </header>
 
-            <div class="stats-grid" id="statsGrid">
-                <!-- Stats will be populated by JS -->
-                <div class="stat-card skeleton"></div>
-                <div class="stat-card skeleton"></div>
-                <div class="stat-card skeleton"></div>
-            </div>
-
-            <div class="dashboard-sections">
-                <div class="section-card doctors-section">
-                    <div class="section-header">
-                        <h2>Top Doctors</h2>
-                        <a href="#" class="view-all">View All</a>
-                    </div>
-                    <div class="list-container" id="doctorsList">
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-text"></div>
-                    </div>
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="view-section active">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card skeleton"></div>
+                    <div class="stat-card skeleton"></div>
+                    <div class="stat-card skeleton"></div>
                 </div>
 
-                <div class="section-card appointments-section">
-                    <div class="section-header">
-                        <h2>Recent Appointments</h2>
-                        <a href="#" class="view-all">View All</a>
+                <div class="dashboard-sections">
+                    <div class="section-card doctors-section">
+                        <div class="section-header">
+                            <h2>Top Doctors</h2>
+                            <a href="#" class="view-all" onclick="document.querySelector('[data-target=doctorsSection]').click()">View All</a>
+                        </div>
+                        <div class="list-container" id="dashboardDoctorsList">
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-text"></div>
+                        </div>
                     </div>
-                    <div class="list-container" id="appointmentsList">
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-text"></div>
+
+                    <div class="section-card appointments-section">
+                        <div class="section-header">
+                            <h2>Recent Appointments</h2>
+                            <a href="#" class="view-all" onclick="document.querySelector('[data-target=appointmentsSection]').click()">View All</a>
+                        </div>
+                        <div class="list-container" id="dashboardAppointmentsList">
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-text"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Doctors Section -->
+            <section id="doctorsSection" class="view-section" style="display: none;">
+                <div class="section-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Specialization</th>
+                                <th>Department</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doctorsTableBody">
+                            <tr><td colspan="5">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Patients Section -->
+            <section id="patientsSection" class="view-section" style="display: none;">
+                <div class="section-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Gender</th>
+                                <th>Date of Birth</th>
+                                <th>Phone</th>
+                                <th>Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Appointments Section -->
+            <section id="appointmentsSection" class="view-section" style="display: none;">
+                <div class="section-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient Name</th>
+                                <th>Doctor Name</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appointmentsTableBody">
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
+
+    <!-- Appointment Modal -->
+    <div id="appointmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModalBtn">&times;</span>
+            <h2>Book New Appointment</h2>
+            <form id="appointmentForm">
+                <div class="form-group">
+                    <label>Select Patient</label>
+                    <select id="patientSelect" required>
+                        <option value="">Loading patients...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Doctor</label>
+                    <select id="doctorSelect" required>
+                        <option value="">Loading doctors...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="appointmentDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="time" id="appointmentTime" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="submitAppointmentBtn">Book Appointment</button>
+                <div id="formMsg" style="margin-top: 1rem; text-align: center; font-size: 0.9rem;"></div>
+            </form>
+        </div>
+    </div>
+
     <script src="/js/script.js"></script>
 </body>
 </html>
