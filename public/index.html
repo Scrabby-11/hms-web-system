@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMS | Hospital Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>HMS<span class="highlight">.</span></h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <span class="icon">📊</span> Dashboard
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">👨‍⚕️</span> Doctors
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📅</span> Appointments
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">🤒</span> Patients
+                </a>
+            </nav>
+            <div class="user-profile">
+                <div class="avatar">A</div>
+                <div class="user-info">
+                    <p class="name">Admin User</p>
+                    <p class="role">System Administrator</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1>Dashboard Overview</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary">+ New Appointment</button>
+                </div>
+            </header>
+
+            <div class="stats-grid" id="statsGrid">
+                <!-- Stats will be populated by JS -->
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+            </div>
+
+            <div class="dashboard-sections">
+                <div class="section-card doctors-section">
+                    <div class="section-header">
+                        <h2>Top Doctors</h2>
+                        <a href="#" class="view-all">View All</a>
+                    </div>
+                    <div class="list-container" id="doctorsList">
+                        <div class="skeleton-text"></div>
+                        <div class="skeleton-text"></div>
+                        <div class="skeleton-text"></div>
+                    </div>
+                </div>
+
+                <div class="section-card appointments-section">
+                    <div class="section-header">
+                        <h2>Recent Appointments</h2>
+                        <a href="#" class="view-all">View All</a>
+                    </div>
+                    <div class="list-container" id="appointmentsList">
+                        <div class="skeleton-text"></div>
+                        <div class="skeleton-text"></div>
+                        <div class="skeleton-text"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/js/script.js"></script>
+</body>
+</html>
